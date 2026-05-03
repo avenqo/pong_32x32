@@ -38,7 +38,7 @@ enum MenuItem { MODE, // DEMO, GAME etc.
                 VOLUME,
                 BRIGHTNESS,
                 COLOR };
-MenuItem currentMenu = SPEED;
+MenuItem currentMenu = MODE;
 MenuSetup menu;
 
 
@@ -57,10 +57,7 @@ StateItem lastSystemState = START;
 
 void onEncoderRotation(int direction) {
   logg->info("onEncoderRotation()");
-  //static int position = 0;
-  //position += direction;
-  //lcd->showEncoder(position, direction > 0 ? "Rechts" : "Links ");
-
+ 
   switch (currentMenu) {
     case MODE:
       if (systemState == DEMO) {
