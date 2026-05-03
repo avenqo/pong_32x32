@@ -9,7 +9,7 @@
 #define MEDIUM_DURATION 1000
 #define SHORT_DURATION 50
 
-class RotaryEncoder {
+class RotaryEncoder{
 public:
     RotaryEncoder(int clkPin, int dtPin, int swPin);
     void onRotation(void (*callback)(int));

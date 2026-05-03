@@ -12,7 +12,7 @@ class Pong {
 
 public:
   // Requires that Serial is alread
-  Pong(MAX7219Display *m, DFPlayer* p);
+  Pong(MAX7219Display *m, DFPlayer *p);
   //~Pong();
 
   /**
@@ -20,19 +20,29 @@ public:
   */
   void clearDisplay();
   void loop(Joystick *j1, Joystick *j2);
+  void loop1(Joystick *j1, Joystick *j2);
   void drawBar(uint8_t y, bool isLeft);
   void drawBall(uint8_t x, uint8_t y);
   void startGame();  // start button pressed
+  void calcDemoInput();
+  void enableDemoMode() { demoMode = true; }
+  void disableDemoMode() { demoMode = false; }
 
 private:
-  Log* logg;
+  Log *logg;
+  bool demoMode = false;
+
+  // "Fake Input"
+  uint8_t demo_up_left = 0, demo_down_left = 0;
+  uint8_t demo_up_right = 0, demo_down_right = 0;
+
   // height of bar
   const uint8_t HEIGHT_BAR = 6;
-  DFPlayer* player;
+  DFPlayer *player;
 
   byte roundCounter;
   MAX7219Display *matrixDisplay;
- 
+
   // y coord of bars (left, right)
   uint8_t posBarLeftY, posBarRightY;
   // position of ball
@@ -43,7 +53,7 @@ private:
   uint8_t goalsLeft, goalsRight;
   //bool ballDirection;
 
-// if true, loop should calculate ball position AND show new Result and start a new round.
+  // if true, loop should calculate ball position AND show new Result and start a new round.
   bool goalDetected;
 
   // the ball shall be slower than the paddle
