@@ -13,6 +13,8 @@ The key components include:
 
 Additionally, an SD card reader is integrated, which can be used, for example, to display graphics.
 
+![Pöng32](images/IMG_8803.jpg "Optional")
+
 The project consists of documentation for:
 
 - Hardware,
