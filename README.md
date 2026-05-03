@@ -13,13 +13,13 @@ The key components include:
 
 Additionally, an SD card reader is integrated, which can be used, for example, to display graphics.
 
-![Pöng32](images/IMG_8803.jpg "Optional")
+![Pöng32](doc/images/IMG_8803.jpg "Optional")
 
 The project consists of documentation for:
 
-- Hardware,
-- 3D models for the casing and individual components,
-- The actual software, as well as several smaller test programs.
+- [Hardware](doc/hardware.md),
+- 3D models for the [Casing](doc/casing.md) and individual components,
+- The actual [Software](doc/software.md), as well as several smaller test programs.
 
 Inspired by the classic game Pong, I implemented a similar game to demonstrate the capabilities of the platform - **PöNG 32x32**.
 
