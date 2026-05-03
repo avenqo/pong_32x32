@@ -2,8 +2,55 @@
 
 // ------- Loop ------
 
-// Calculate Memory depending on Joysticks
 void Pong::loop(Joystick *j_left, Joystick *j_right) {
+  if (goalDetected) {
+    goalDetected = false;
+    onGoal();
+  }
+
+  clearDisplay();
+
+  // Ballposition berechnen
+  if (--ignoreBall == 0) {
+    calcBallPosition();
+    ignoreBall = 2;
+  }
+
+  // Demo-Mode: Paddle -Bewegung automatisch berechnen
+  if (demoMode) {
+    calcDemoInput();
+    // Verwende die berechneten Demo-Werte für die Paddles
+    if (demo_up_left > 0) posBarLeftY = decrement(posBarLeftY);
+    else if (demo_down_left > 0) posBarLeftY = increment(posBarLeftY);
+
+    if (demo_up_right > 0) posBarRightY = decrement(posBarRightY);
+    else if (demo_down_right > 0) posBarRightY = increment(posBarRightY);
+  }
+  // Normaler Modus: Joystick-Eingaben verwenden
+  else {
+    uint8_t up_left = j_left->getMoveValue_Up();
+    uint8_t down_left = j_left->getMoveValue_Down();
+    if (up_left > 0) posBarLeftY = decrement(posBarLeftY);
+    else if (down_left > 0) posBarLeftY = increment(posBarLeftY);
+
+    uint8_t up_right = j_right->getMoveValue_Up();
+    uint8_t down_right = j_right->getMoveValue_Down();
+    if (up_right > 0) posBarRightY = decrement(posBarRightY);
+    else if (down_right > 0) posBarRightY = increment(posBarRightY);
+  }
+
+  // Paddles und Ball zeichnen
+  drawBar(posBarLeftY, true);
+  drawBar(posBarRightY, false);
+  drawBall(ballX, ballY);
+
+  matrixDisplay->showMessage(goalsLeft, ":", goalsRight);
+}
+/**
+    Delete this
+*/
+// Calculate Memory depending on Joysticks
+void Pong::loop1(Joystick *j_left, Joystick *j_right) {
 #ifdef PONG_DEBUG
   Serial.println("--- pong.loop(...) ---");
 #endif
@@ -16,10 +63,10 @@ void Pong::loop(Joystick *j_left, Joystick *j_right) {
   clearDisplay();
 
   // Calc position of ball; this sets goalDetected if found
-  if (--ignoreBall ==0 ) {
-  calcBallPosition();
-  ignoreBall = 2;
-}
+  if (--ignoreBall == 0) {
+    calcBallPosition();
+    ignoreBall = 2;
+  }
 
   // calculate position racket LEFT
   uint8_t up_left = j_left->getMoveValue_Up();
@@ -91,7 +138,13 @@ void Pong::startRound() {
 #endif
 
   goalDetected = false;
-  matrixDisplay->showMessage("Starte");
+  if (demoMode) {
+    matrixDisplay->showMessage("DEMO");
+    delay(1000);
+    matrixDisplay->showMessage("MODE");
+  } else {
+    matrixDisplay->showMessage("Starte");
+  }
   delay(1000);
   matrixDisplay->showMessage("Runde");
   player->startRound();
@@ -111,7 +164,6 @@ logg->info("ballSpeedY", ballSpeedY);
   logg->info("ballY", ballY);
   delay(5000);
 */
-  
 
   drawBall(ballX, ballY);
   roundCounter++;
@@ -242,9 +294,9 @@ bool Pong::checkBall4Collision(uint8_t border_x, uint8_t barTopY, bool isLeft) {
 void Pong::onGoal() {
   matrixDisplay->showMessage("TOOOR!");
   player->onGoal();
-  drawBall(ballX, ballY); // draw last position
+  drawBall(ballX, ballY);  // draw last position
   delay(5000);
-  
+
   matrixDisplay->showMessage(goalsLeft, ":", goalsRight);  // Aktualisiere die Anzeige
   startRound();
 }
@@ -308,4 +360,39 @@ Pong::Pong(MAX7219Display *m, DFPlayer *p) {
 
   logg = new Log("Encoder");
   ignoreBall = 2;
+}
+
+void Pong::calcDemoInput() {
+
+  // Reset
+  demo_up_left = demo_down_left = 0;
+  demo_up_right = demo_down_right = 0;
+
+  // Zielposition = Ballhöhe (mit Offset für Mitte des Paddles)
+  int targetLeft = ballY - HEIGHT_BAR / 2;
+  int targetRight = ballY - HEIGHT_BAR / 2;
+
+  // --- Fehler / "Unperfekt" ---
+  // 20% Chance auf falsche Entscheidung
+  bool errorLeft = random(0, 100) < 20;
+  bool errorRight = random(0, 100) < 20;
+
+  // --- LEFT Paddle ---
+  if (!errorLeft) {
+    if (posBarLeftY < targetLeft) demo_down_left = 1;
+    else if (posBarLeftY > targetLeft) demo_up_left = 1;
+  } else {
+    // falsche Bewegung
+    if (random(0, 2) == 0) demo_up_left = 1;
+    else demo_down_left = 1;
+  }
+
+  // --- RIGHT Paddle ---
+  if (!errorRight) {
+    if (posBarRightY < targetRight) demo_down_right = 1;
+    else if (posBarRightY > targetRight) demo_up_right = 1;
+  } else {
+    if (random(0, 2) == 0) demo_up_right = 1;
+    else demo_down_right = 1;
+  }
 }

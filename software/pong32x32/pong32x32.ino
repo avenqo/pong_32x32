@@ -9,7 +9,9 @@
 #include "Matrix32x32.h"
 #include "pong.h"
 #include "DFPlayer.h"
+#include "Global.h"
 
+#define DEBUG_PONG
 
 // Pins
 const int encClkPin = 25, encDtPin = 16, encSwPin = 17;
@@ -29,15 +31,10 @@ Matrix32x32* matrix;
 Pong* pong;
 DFPlayer* player;
 
-// --- System State ---
-enum StateItem { START,
-                 DEMO,
-                 GAME };
-StateItem systemState = START;
-const char* stateStrings[] = { "START", "DEMO", "GAME" };
 
 // --- Menu Items ---
-enum MenuItem { SPEED,
+enum MenuItem { MODE, // DEMO, GAME etc.
+                SPEED,
                 VOLUME,
                 BRIGHTNESS,
                 COLOR };
@@ -65,6 +62,14 @@ void onEncoderRotation(int direction) {
   //lcd->showEncoder(position, direction > 0 ? "Rechts" : "Links ");
 
   switch (currentMenu) {
+    case MODE:
+      if (systemState == DEMO) {
+         switchState(GAME);
+      } else {
+         switchState(DEMO);
+      }
+      
+      break;
     case SPEED:
       // limit the value between 0 and 100
       menu.speedValue = constrain(menu.speedValue + direction, 0, 100);
@@ -73,15 +78,15 @@ void onEncoderRotation(int direction) {
       break;
     case VOLUME:
       menu.volumeValue = constrain(menu.volumeValue + direction, 0, 30);
-      player->setVolume( menu.volumeValue);
-      delay(300); // without delay -> there is the chance to crash
+      player->setVolume(menu.volumeValue);
+      delay(300);  // without delay -> there is the chance to crash
       // just to gear the difference
-      player->onHitLeftRacket(); 
+      player->onHitLeftRacket();
       break;
     case BRIGHTNESS:
       menu.brightnessValue = constrain(menu.brightnessValue + direction, 0, 255);
 
-matrix->setBrightness(menu.brightnessValue );
+      matrix->setBrightness(menu.brightnessValue);
       matrix->allOff();
       matrix->drawMemory();
       player->onHitRightRacket();
@@ -100,6 +105,10 @@ void updateMenuDisplay() {
   lcd->clear();
 
   switch (currentMenu) {
+     case MODE:
+      snprintf(buffer, sizeof(buffer), "Mode: %s", stateStrings[systemState]);
+      lcd->showText(0, buffer);
+      break;
     case SPEED:
       snprintf(buffer, sizeof(buffer), "Speed: %3u", menu.speedValue);
       lcd->showText(0, buffer);
@@ -134,11 +143,10 @@ void onEncoderButtonPressShort() {
 void onEncoderButtonPressMedium() {
   logg->info("onEncoderButtonPressMedium()");
 
-  // if in Demo mode -> start Game
   if (systemState == DEMO) {
     switchState(GAME);
-    // missing menu handling
   } else if (systemState == GAME) {
+    switchState(DEMO);
   }
 }
 
@@ -183,8 +191,9 @@ void switchState(StateItem newState) {
     }
 
   } else if (systemState == GAME) {
-
-
+    if (newState == DEMO) {
+      allowStateChange = true;
+    }
   } else {
     maxDisplay->showMessage("E9247");
   }
@@ -195,6 +204,11 @@ void switchState(StateItem newState) {
     lcd->showText(1, stateStrings[systemState]);
     delay(500);
     logg->info("switch to new state", stateStrings[systemState]);
+
+     if (systemState == DEMO) 
+      pong->enableDemoMode();
+     else if (newState == GAME) 
+      pong->disableDemoMode();
   }
 }
 
@@ -209,7 +223,7 @@ void setup() {
   logg->info("=== Start PÖNG 32x32 ===");
 
   // clear all data
-  matrix = new Matrix32x32(menu.brightnessValue );
+  matrix = new Matrix32x32(menu.brightnessValue);
   matrix->allOff();
   matrix->drawMemory();
 
@@ -217,8 +231,8 @@ void setup() {
   lcd->showText(0, "PöNG 32x32");
 
   maxDisplay = new MAX7219Display(maxClkPin, maxDinPin, maxCsPin);
-  maxDisplay->showMessage("P\xD6NG!"); // PöNG
-  
+  maxDisplay->showMessage("P\xD6NG!");  // PöNG
+
   delay(500);
 
   encoder = new RotaryEncoder(encClkPin, encDtPin, encSwPin);
@@ -245,21 +259,20 @@ void setup() {
   //joy2->onMovement(onJoystickMovement_right);
   joy2->onButtonPress(onJoystickButtonPress_right);
 
-  
-
   maxDisplay->showMessage("Ready");
 
   // at this point we are still in START mode
+  pong->enableDemoMode();
 }
 
 // =============== loop() ==================
-
 
 void loop() {
 
   // handle menu adjustments
   encoder->update();
 
+  // After Switch on keep the Start state running for 5 sec
   if (systemState == START) {
     maxDisplay->showMessage("START");
     if ((millis() - loopCntMillis) > 5000) {
@@ -267,9 +280,9 @@ void loop() {
       loopCntMillis = millis();
       switchState(DEMO);
     }
-  } else if (systemState == DEMO) {
-    maxDisplay->showMessage("DEMO");
-  } else if (systemState == GAME) {
+  }
+
+  else if ((systemState == GAME) || (systemState == DEMO)) {
 
     // State switched? Starte Game!
     if (lastSystemState != systemState) {
