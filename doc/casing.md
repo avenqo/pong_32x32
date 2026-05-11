@@ -1,26 +1,39 @@
 ## Casing
-t.b.d.
 
-Das Geäuse besteht aus mehreren Teilen. Alle Teile wurden mit 15% Füllung gedruckt.
+The casing consists of several parts. All parts were printed with 15% infill.
 
-Die einzelnen 8x8 RGB Matrix Elemente habe ich auf eine plane Fläche gelegt, mit Heißkleber verklebt und dann noch einmal mit einer Hartfaserplatte von hinten verklebt.
-Dann kann das ganze in den Rahmen eingeklebt werden.
+I placed the individual 8x8 RGB matrix elements on a flat surface, bonded them together with hot glue, and then reinforced the assembly by gluing a hardboard backing to the rear.
+The entire assembly can then be glued into the frame.
 
-### Rahmen
-Der Rahmen wird im Gehäuse plaziert.
+### Frame
+The frame is positioned inside the casing. 
+Here, the LED matrix is ​​bonded—glued into the housing—and screwed in place. When I say "screwed in," I am referring to the use of heat-set inserts, which are embedded into the plastic using a soldering iron.
+
 ![](images/frame.png)
 
-### Gehäuse
-![Gehäuse](images/poeng32.png)
+### Casing
+The individual components are screwed or glued into the housing and wired.
+
+![Casing](images/poeng32.png)
 
 
 ### Ethernet Clips
-Im Gehäuse befinden sich Ethernetanschlüsse, an denen die Joysticks angeschlossen werden über ein übliches Ethernet-Patch-Kabel.
+The casing features Ethernet ports to which the joysticks are connected using standard Ethernet patch cables.
+Therefore, if you are connecting two joysticks, you will need four of these clips (two inside the main casing, and one inside each of the respective joystick housings).
 
-![Clips für Ethernetanschlüsse](images/ethernet_clips.png)
+![Clips for Ethernet Ports](images/ethernet_clips.png)
+![Clips for Ethernet Ports](images/ethernet_clips_pic.jpg)
 
 
-### Ständer
-Der Ständer bietet die Möglichkeit, das Spiel kippsicher aufzustellen.
-![Ständer](images/stands.png)
+### Stand
+The stand allows the game unit to be set up securely without the risk of tipping over.
+![Stand](images/stands.png)
 
+### Joysticks
+The joysticks are glued into these housings (two are required), and the housings are then screwed shut.
+
+![Joystick](images/joy_pic.jpg)
+
+Here, too, a single Ethernet clip is required for each unit to secure the Ethernet jack in place.
+
+![Joystick](images/joy.png)
