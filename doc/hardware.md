@@ -2,7 +2,7 @@
 
 I purchased most of the components from AliExpress.
 
-[The wiring is described here.](hardware/wiring.md) 
+[The wiring is described here.](../hardware/wiring.md) 
 
 The following table provides an overview of the used components.
 
