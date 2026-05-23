@@ -2,8 +2,9 @@
 
 I purchased most of the components from AliExpress.
 
-The hardware wiring can actually be deduced from the software sauce code. The following diagram provides an overview.
+[The wiring is described here.](hardware/wiring.md) 
 
+The following table provides an overview of the used components.
 
 ### Bill of Material
 
@@ -22,3 +23,4 @@ The hardware wiring can actually be deduced from the software sauce code. The fo
 | Power Supply 5V/5A 				| 1     |            $5 |
 | Ethernet Connectors 				| 2     |            $1 |
 | Ethernet Patch Cable 				| 2     |            $1 |
+
