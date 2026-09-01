@@ -23,7 +23,7 @@ const int joy2VrxPin = 32, joy2VryPin = 33, joy2SwPin = 26;
 RotaryEncoder* encoder;
 Joystick* joy1;
 Joystick* joy2;
-LCDDisplay* lcd;  // or 0x3F
+LCDDisplay* lcd;
 MAX7219Display* maxDisplay;
 SdCard* sdcard;
 Log* logg;
