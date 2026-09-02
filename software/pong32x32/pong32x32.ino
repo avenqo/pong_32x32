@@ -37,6 +37,8 @@ enum MenuItem { MODE, // DEMO, GAME etc.
                 SPEED,
                 VOLUME,
                 BRIGHTNESS,
+                WINSCORE,
+                ACCEL,
                 COLOR };
 MenuItem currentMenu = MODE;
 MenuSetup menu;
@@ -50,7 +52,8 @@ int y = 0;
 int num = 0;
 
 unsigned int loopCntMillis = millis();
-unsigned int loopTimeLimit = menu.speedValue;
+// Never let the loop period reach 0 (would make the ball uncontrollable).
+unsigned int loopTimeLimit = constrain(menu.speedValue, MIN_LOOP_MS, MAX_LOOP_MS);
 StateItem lastSystemState = START;
 
 // ---- Encoder & Menu Selection----
@@ -68,8 +71,10 @@ void onEncoderRotation(int direction) {
       
       break;
     case SPEED:
-      // limit the value between 0 and 100
-      menu.speedValue = constrain(menu.speedValue + direction, 0, 100);
+      // speedValue is the loop *delay* in ms, so turning clockwise (direction > 0)
+      // must make it smaller = faster. Kept inside [MIN_LOOP_MS, MAX_LOOP_MS].
+      menu.speedValue = constrain((int)menu.speedValue - direction * SPEED_STEP,
+                                  MIN_LOOP_MS, MAX_LOOP_MS);
       loopTimeLimit = menu.speedValue;
       player->onHitRightRacket();
       break;
@@ -89,6 +94,21 @@ void onEncoderRotation(int direction) {
       player->onHitRightRacket();
 
       break;
+    case WINSCORE:
+      // cycle through the three allowed targets 3 / 5 / 10
+      if (direction > 0)
+        menu.winScore = (menu.winScore < 5) ? 5 : 10;
+      else
+        menu.winScore = (menu.winScore > 5) ? 5 : 3;
+      pong->setWinScore(menu.winScore);
+      player->onHitLeftRacket();
+      break;
+    case ACCEL:
+      // 0 = off, 1..3 = gentle..strong rally speed-up
+      menu.accelValue = constrain(menu.accelValue + direction, 0, 3);
+      pong->setAccel(menu.accelValue);
+      player->onHitLeftRacket();
+      break;
     case COLOR:
       menu.colorValue = constrain(menu.colorValue + direction, 1, 3);
       break;
@@ -107,7 +127,8 @@ void updateMenuDisplay() {
       lcd->showText(0, buffer);
       break;
     case SPEED:
-      snprintf(buffer, sizeof(buffer), "Speed: %3u", menu.speedValue);
+      // Show it as what it is: the per-frame delay in ms (smaller = faster).
+      snprintf(buffer, sizeof(buffer), "Delay: %3u ms", menu.speedValue);
       lcd->showText(0, buffer);
       break;
     case VOLUME:
@@ -116,6 +137,17 @@ void updateMenuDisplay() {
       break;
     case BRIGHTNESS:
       snprintf(buffer, sizeof(buffer), "Brightness: %3u", menu.brightnessValue);
+      lcd->showText(0, buffer);
+      break;
+    case WINSCORE:
+      snprintf(buffer, sizeof(buffer), "Win at: %2u", menu.winScore);
+      lcd->showText(0, buffer);
+      break;
+    case ACCEL:
+      if (menu.accelValue == 0)
+        snprintf(buffer, sizeof(buffer), "Accel: OFF");
+      else
+        snprintf(buffer, sizeof(buffer), "Accel: %u", menu.accelValue);
       lcd->showText(0, buffer);
       break;
     case COLOR:
@@ -132,7 +164,8 @@ void updateMenuDisplay() {
 void onEncoderButtonPressShort() {
   logg->info("onEncoderButtonPressShort()");
 
-  currentMenu = static_cast<MenuItem>((currentMenu + 1) % 4);
+  // 5 menu items (MODE..COLOR) - the old "% 4" made COLOR unreachable.
+  currentMenu = static_cast<MenuItem>((currentMenu + 1) % (COLOR + 1));
   updateMenuDisplay();
 }
 
@@ -150,10 +183,22 @@ void onEncoderButtonPressMedium() {
 
 void onEncoderButtonPressLong() {
   logg->info("onEncoderButtonPressLong()");
-  lcd->clear();
-  lcd->showText(0, "Restarte Pöng   ");
-  delay(500);
-  ESP.restart();
+
+  // Two-step confirm: the first long press only arms the restart, a second
+  // long press within 4 s actually does it. Prevents an accidental reboot
+  // mid-game.
+  static unsigned long armedAt = 0;
+  if (armedAt != 0 && (millis() - armedAt) < 4000) {
+    lcd->clear();
+    lcd->showText(0, "Restarte Poeng");
+    delay(400);
+    ESP.restart();
+  } else {
+    armedAt = millis();
+    lcd->clear();
+    lcd->showText(0, "Neustart? Taste");
+    lcd->showText(1, "lang halten");
+  }
 }
 
 // --- Joystick Button pressed ---
@@ -219,6 +264,10 @@ void setup() {
   logg = new Log("Main");
   logg->info("=== Start PÖNG 32x32 ===");
 
+  // Seed the RNG so ball serves and the demo AI are not identical every boot.
+  // (ADC noise on the joystick inputs + micros() at power-on = enough entropy.)
+  randomSeed(micros() ^ (analogRead(joy1VrxPin) << 3) ^ (analogRead(joy2VrxPin) << 7));
+
   // clear all data
   matrix = new Matrix32x32(menu.brightnessValue);
   matrix->allOff();
@@ -243,6 +292,8 @@ void setup() {
   player->setVolume(menu.volumeValue);
 
   pong = new Pong(maxDisplay, player);
+  pong->setWinScore(menu.winScore);
+  pong->setAccel(menu.accelValue);
 
   // Callbacks registrieren
   encoder->onRotation(onEncoderRotation);
@@ -265,6 +316,17 @@ void setup() {
 // =============== loop() ==================
 
 void loop() {
+
+  // --- crash tracing -------------------------------------------------------
+  // Prints a heartbeat with the free heap once a second. If the board freezes,
+  // the last line pins down when it died; a steadily falling heap points at a
+  // leak, a sudden stop with plenty of heap points at power / peripheral lock-up.
+  static unsigned long hbTimer = 0;
+  if (millis() - hbTimer > 1000) {
+    hbTimer = millis();
+    Serial.printf("[hb] t=%lu state=%d heap=%u\n",
+                  millis(), (int)systemState, ESP.getFreeHeap());
+  }
 
   // handle menu adjustments
   encoder->update();
@@ -294,15 +356,18 @@ void loop() {
       joy1->update();
       joy2->update();
 
-      // Calculate the number only every second time.
-      static boolean boolCalcPong = false;
-      pong != pong;
       if (pong) {
         pong->loop(joy1, joy2);
       }
 
-      // here the Matrix is drawn from memory as set by pong->loop()
-      matrix->drawMemory();
+      // Repaint the matrix from the framebuffer, but never faster than
+      // MIN_DRAW_MS: drawMemory() blocks with interrupts off for ~31 ms, so
+      // calling it back-to-back starves the system and can freeze the board.
+      static unsigned long drawTimer = millis();
+      if ((millis() - drawTimer) >= MIN_DRAW_MS) {
+        drawTimer = millis();
+        matrix->drawMemory();
+      }
     }
   } else {
     maxDisplay->showMessage("E9246");
